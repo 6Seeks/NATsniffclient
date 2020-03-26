@@ -1,0 +1,11 @@
+<!--index.wxml-->
+<view class="container">
+  <view class="weui-cells__title">测量当前网络环境</view>
+
+  <button bindtap="startMeasure">开始测量</button>
+
+
+  <text>{{PublicIPAddress}}</text>
+  <text>{{NetworkType}}</text>
+  <button bindtap="startDiscovery">开始测量mdns</button>
+</view>
