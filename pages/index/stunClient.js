@@ -1,8 +1,8 @@
 // var dns = require('dns');
 // var dgram = require('dgram');
 
-var md5 = require('js-md5');;
-
+var md5 = require('js-md5');
+var Buffer = require('buffer').Buffer;
 
 // Utils
 
@@ -607,7 +607,7 @@ Message.prototype.deserialize = function(buffer) {
   var Ctor = this.constructor;
   var ctx = {
     pos: 0,
-    buf: buffer
+    buf: Buffer(buffer)
   };
 
   // Initialize.
@@ -629,17 +629,18 @@ Message.prototype.deserialize = function(buffer) {
   len |= ctx.buf[ctx.pos++];
 
   // Parse tid.
+
   this._tid = ctx.buf.slice(ctx.pos, ctx.pos + 16);
   ctx.pos += 16;
 
   // The remaining length should match the value in the length field.
   if (ctx.buf.length - 20 != len)
-    throw new Error("Malformed data");
+    throw new Error("Malformed data 1");
 
   while (ctx.pos < ctx.buf.length) {
     // Remaining size in the buffer must be >= 4.
     if (ctx.buf.length - ctx.pos < 4)
-      throw new Error("Malformed data");
+      throw new Error("Malformed data 2");
 
     var attrLen;
     var code;
@@ -739,8 +740,8 @@ function Client() {
     addr: '0.0.0.0',
     port: 0
   };
-  this._soc0;
-  this._soc1;
+  this._soc0 = wx.createUDPSocket();
+  this._soc1 = wx.createUDPSocket();
   this._breq0; // Binding request 0 of type Message.
   this._breq1; // Binding request 1 of type Message.
   this._state = State.IDLE;
@@ -781,6 +782,12 @@ function Client() {
   this._mode = Const.Mode.FULL;
   this._rtt = new Rtt();
 }
+
+Client.prototype._onListening = function() {
+  this._numSocs++;
+  //console.log("this._numSocs++: " + this._numSocs);
+};
+
 
 /**
  * @private
@@ -837,25 +844,25 @@ Client.prototype._discover = function() {
   // Create socket 0.
   // for wx
   // this._soc0 = dgram.createSocket("udp4");
-  this._soc0 = wx.createUDPSocket();
+  // this._soc0 = wx.createUDPSocket();
   // this._soc0.on("listening", function() {
   //   self._onListening();
   // });
-  this._soc0.onListening(function() {
+  self._soc0.onListening(function() {
     self._onListening();
-  })
+  });
   // this._soc0.on("message", function(msg, rinfo) {
   //   self._onReceived(msg, rinfo);
   // });
-  this._soc0.onMessage(function(res) {
+  self._soc0.onMessage(function(res) {
     self._onReceived(res.message, res.remoteInfo);
-  })
+  });
   // this._soc0.on("close", function() {
   //   self._onClosed();
   // });
-  this._soc0.onClose(function() {
+  self._soc0.onClose(function() {
     self._onClosed();
-  })
+  });
 
 
   // Start listening on the local port.
@@ -923,10 +930,7 @@ Client.prototype._onResolved = function(err, addresses) {
   this._discover();
 };
 
-Client.prototype._onListening = function() {
-  this._numSocs++;
-  //console.log("this._numSocs++: " + this._numSocs);
-};
+
 
 Client.prototype._onClosed = function() {
   if (this._numSocs > 0) {
@@ -993,7 +997,14 @@ Client.prototype._onTick = function() {
             break;
         }
 
-        this._soc0.send(sbuf, 0, sbuf.length, toPort, toAddr);
+        // this._soc0.send(sbuf, 0, sbuf.length, toPort, toAddr);
+        this._soc0.send({
+          address: toAddr,
+          port: toPort,
+          message: sbuf,
+          offset: 0,
+          length: sbuf.length
+        });
         console.log(
           "NB-Rtx0: len=" + sbuf.length +
           " retrans=" + this._retrans +
@@ -1019,7 +1030,14 @@ Client.prototype._onTick = function() {
       if (this._ef.ad == undefined) {
         if (this._retrans < 9) {
           sbuf = this._breq0.serialize();
-          this._soc1.send(sbuf, 0, sbuf.length, this._port0, this._serv0);
+          // this._soc1.send(sbuf, 0, sbuf.length, this._port0, this._serv0);
+          this._soc1.send({
+            address: this._serv0,
+            port: this._port0,
+            message: sbuf,
+            offset: 0,
+            length: sbuf.length
+          });
           console.log("EF-Rtx0: retrans=" + this._retrans + " elapsed=" + this._elapsed);
         } else {
           this._ef.ad = 1;
@@ -1028,7 +1046,14 @@ Client.prototype._onTick = function() {
       if (this._ef.pd == undefined) {
         if (this._retrans < 9) {
           sbuf = this._breq1.serialize();
-          this._soc1.send(sbuf, 0, sbuf.length, this._port0, this._serv0);
+          // this._soc1.send(sbuf, 0, sbuf.length, this._port0, this._serv0);
+          this._soc1.send({
+            address: this._serv0,
+            port: this._port0,
+            message: sbuf,
+            offset: 0,
+            length: sbuf.length
+          });
           console.log("EF-Rtx1: retrans=" + this._retrans + " elapsed=" + this._elapsed);
         } else {
           this._ef.pd = 1;
@@ -1127,8 +1152,14 @@ Client.prototype._onReceived = function(msg, rinfo) {
     });
     */
     sbuf = this._breq0.serialize();
-    this._soc0.send(sbuf, 0, sbuf.length, this._port1, this._serv0);
-
+    // this._soc0.send(sbuf, 0, sbuf.length, this._port1, this._serv0);
+    this._soc0.send({
+      address: this._serv0,
+      port: this._port1,
+      message: sbuf,
+      offset: 0,
+      length: sbuf.length
+    });
     this._retrans = 0;
     this._elapsed = 0;
     this._intervalId = setInterval(function() {
@@ -1170,8 +1201,14 @@ Client.prototype._onReceived = function(msg, rinfo) {
     });
     */
     sbuf = this._breq0.serialize();
-    this._soc0.send(sbuf, 0, sbuf.length, this._port0, this._serv1);
-
+    // this._soc0.send(sbuf, 0, sbuf.length, this._port0, this._serv1);
+    this._soc0.send({
+      address: this._serv1,
+      port: this._port0,
+      message: sbuf,
+      offset: 0,
+      length: sbuf.length
+    });
     this._retrans = 0;
     this._elapsed = 0;
     this._intervalId = setInterval(function() {
@@ -1213,8 +1250,14 @@ Client.prototype._onReceived = function(msg, rinfo) {
     });
     */
     sbuf = this._breq0.serialize();
-    this._soc0.send(sbuf, 0, sbuf.length, this._port1, this._serv1);
-
+    // this._soc0.send(sbuf, 0, sbuf.length, this._port1, this._serv1);
+    this._soc0.send({
+      address: this._serv1,
+      port: this._port1,
+      message: sbuf,
+      offset: 0,
+      length: sbuf.length
+    });
     this._retrans = 0;
     this._elapsed = 0;
     this._intervalId = setInterval(function() {
@@ -1250,20 +1293,30 @@ Client.prototype._onReceived = function(msg, rinfo) {
     this._ef.pd = undefined;
 
     // Create another socket (this._soc1) from which EFDiscov is performed).
-    this._soc1 = dgram.createSocket("udp4");
-    this._soc1.on("listening", function() {
+    // this._soc1 = dgram.createSocket("udp4");
+    // this._soc1 = wx.createUDPSocket();
+    // this._soc1.on("listening", function() {
+    //   self._onListening();
+    // });
+    this._soc1.onListening(function() {
       self._onListening();
     });
-    this._soc1.on("message", function(msg, rinfo) {
-      self._onReceived(msg, rinfo);
+    // this._soc1.on("message", function(msg, rinfo) {
+    //   self._onReceived(msg, rinfo);
+    // });
+    this._soc1.onMessage(function(res) {
+      self._onReceived(res.message, res.remoteInfo);
     });
-    this._soc1.on("close", function() {
+    // this._soc1.on("close", function() {
+    //   self._onClosed();
+    // });
+    this._soc1.onClose(function() {
       self._onClosed();
-    });
+    })
 
     // Start listening on the local port.
-    this._soc1.bind(0, this._local.addr);
-
+    // this._soc1.bind(0, this._local.addr);
+    this._soc1.bind();
     // changeIp=true,changePort=true from this._soc1
     this._breq0.init();
     this._breq0.setType('breq');
@@ -1274,8 +1327,14 @@ Client.prototype._onReceived = function(msg, rinfo) {
     });
 
     sbuf = this._breq0.serialize();
-    this._soc1.send(sbuf, 0, sbuf.length, this._port0, this._serv0);
-
+    // this._soc1.send(sbuf, 0, sbuf.length, this._port0, this._serv0);
+    this._soc1.send({
+      address: this._serv0,
+      port: this._port0,
+      message: sbuf,
+      offset: 0,
+      length: sbuf.length
+    });
     // changeIp=false,changePort=true from this._soc1
     this._breq1 = new Message();
     this._breq1.setType('breq');
@@ -1286,8 +1345,14 @@ Client.prototype._onReceived = function(msg, rinfo) {
     });
 
     sbuf = this._breq1.serialize();
-    this._soc1.send(sbuf, 0, sbuf.length, this._port0, this._serv0);
-
+    // this._soc1.send(sbuf, 0, sbuf.length, this._port0, this._serv0);
+    this._soc1.send({
+      address: this._serv0,
+      port: this._port0,
+      message: sbuf,
+      offset: 0,
+      length: sbuf.length
+    });
     this._retrans = 0;
     this._elapsed = 0;
     this._intervalId = setInterval(function() {
@@ -1336,8 +1401,8 @@ Client.prototype._onReceived = function(msg, rinfo) {
  * @returns {Buffer} Returns a 16-random-bytes.
  */
 Client._randTransId = function() {
-  var seed = process.pid.toString(16);
-  seed += Math.round(Math.random() * 0x100000000).toString(16);
+  // var seed = process.pid.toString(16);
+  var seed = Math.round(Math.random() * 0x100000000).toString(16);
   seed += (new Date()).getTime().toString(16);
   return Buffer(md5.arrayBuffer(seed));
 };
@@ -1414,7 +1479,6 @@ Client.prototype.start = function(option, cb) {
     // dns.resolve4(this._domain, this._onResolved.bind(this));
     this._state = State.RESOLV;
   } else {
-    console.log(this._serv0);
     this._discover();
   }
 };

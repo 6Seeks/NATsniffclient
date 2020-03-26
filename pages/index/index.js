@@ -4,8 +4,9 @@ const app = getApp();
 Page({
   data: {
 
-    PublicIPAddress: "",
-    NetworkType: ""
+    publicIPAddress: "",
+    networkType: "",
+    natType: ""
   },
   //事件处理函数
 
@@ -23,7 +24,7 @@ Page({
         console.log(res.data.ip);
 
         that.setData({
-          PublicIPAddress: res.data.ip
+          publicIPAddress: res.data.ip
         });
       }
     })
@@ -31,53 +32,46 @@ Page({
       success: function(res) {
         console.log(res);
         that.setData({
-          NetworkType: res.networkType
+          networkType: res.networkType
         });
       },
     });
-    var md5 = require('js-md5');;
+    // var md5 = require('js-md5');;
+    // var Buffer = require("buffer").Buffer;
 
-
-    var message = 'hello';
-    var digest = md5.update(message).digest("hex");
-    //'hex':将128为数转为十六进制
-    //PS:这边进制一定要转 不然会报错
-
-  
-
-    // setTimeout(function(){
-    //   console.log("????????");
-    //   if (flag =="nothing"){
-    //     console.log("is NAT")
-
-    //   } else if (flag == "anything"){
-    //     console.log()
-    //   }
-    //   ping.close();
-    // },1000);
-   
+    // var seed = Math.round(Math.random() * 0x100000000).toString(16);
+    // seed += (new Date()).getTime().toString(16);
+    // console.log(typeof(md5.arrayBuffer(seed)), md5.arrayBuffer(seed));
+    // console.log(Buffer(md5.arrayBuffer(seed)), typeof (Buffer(md5.arrayBuffer(seed))));
 
 
 
-    // var stunClient = require("./stunClient.js");
-    // var client = stunClient.createClient();
-    // // client.setServerAddr("stun.xten.com");
-    // client.start(function(result) {
-    //   var mapped = client.getMappedAddr();
-    //   console.log([
-    //     "Complete(" + result + "): ",
-    //     (client.isNatted() ? "Natted" : "Open"),
-    //     " NB=" + client.getNB(),
-    //     " EF=" + client.getEF(),
-    //     " (" + client.getNatType() + ")",
-    //     " mapped=" + mapped.address + ":" + mapped.port,
-    //     " rtt=" + client.getRtt()
-    //   ].join(''));
 
-    //   client.close(function() {
-    //     console.log("All sockets closed.");
-    //   });
-    // });
+
+
+
+    var stunClient = require("./stunClient.js");
+    var client = stunClient.createClient();
+    // client.setServerAddr("stun.xten.com");
+    client.start(function(result) {
+      var mapped = client.getMappedAddr();
+      console.log([
+        "Complete(" + result + "): ",
+        (client.isNatted() ? "Natted" : "Open"),
+        " NB=" + client.getNB(),
+        " EF=" + client.getEF(),
+        " (" + client.getNatType() + ")",
+        " mapped=" + mapped.address + ":" + mapped.port,
+        " rtt=" + client.getRtt()
+      ].join(''));
+      that.setData({
+        natType: client.getNatType()
+      });
+      client.close(function() {
+        console.log("All sockets closed.");
+      });
+    });
+    
 
 
 

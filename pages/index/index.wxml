@@ -5,7 +5,8 @@
   <button bindtap="startMeasure">开始测量</button>
 
 
-  <text>{{PublicIPAddress}}</text>
-  <text>{{NetworkType}}</text>
-  <button bindtap="startDiscovery">开始测量mdns</button>
+  <text>{{publicIPAddress}}</text>
+  <text>{{networkType}}</text>
+  <text>{{natType}}</text>
+
 </view>
