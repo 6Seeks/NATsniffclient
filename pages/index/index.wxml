@@ -1,12 +1,36 @@
 <!--index.wxml-->
 <view class="container">
-  <view class="weui-cells__title">测量当前网络环境</view>
+	<view class="weui-cells__title">测量当前网络环境</view>
+	<button bindtap="reloadMeasure">清除缓存</button>
+	<text>公网IP地址:{{publicIPAddress}}</text>
+	<text>网络类型:{{networkType}}</text>
+	<text>当前位置:(lat:{{latitude}},long:{{longitude}})</text>
+	<button bindtap="startMeasure">开始测量</button>
+	<button bindtap="startDownload">下载数据</button>
+	<text>测量时间约10s，请稍等</text>
 
-  <button bindtap="startMeasure">开始测量</button>
+
+	<text>NAT类型:{{natType}}</text>
+
+	<view class="weui-cells__title">您的设备连接上了wifi</view>
+	<view>SSID:{{connectedSSID}}</view>
+	<view>BSSID:{{connectedBSSID}}</view>
+	<view>安全性:{{connectedsecure}}</view>
+	<view>信号强度:{{connectedsignalStrength}}</view>
 
 
-  <text>{{publicIPAddress}}</text>
-  <text>{{networkType}}</text>
-  <text>{{natType}}</text>
+	<view class="weui-cells__title">当前网络环境中存在以下网络源</view>
+	<block wx:for="{{objectArray}}" wx:key="BSSID" style="display: block;">
+
+		<view class="SSID">SSID:{{item.SSID}}</view>
+		<view class="BSSID">BSSID:{{item.BSSID}}</view>
+		<view class="secure">安全性:{{item.secure}}</view>
+		<view class="signalStrength">信号强度:{{item.signalStrength}}</view>
+
+
+
+	</block>
+
+
 
 </view>
